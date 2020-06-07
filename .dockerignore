@@ -7,7 +7,7 @@ README.*
 __main__
 _out
 apiserver.local.config
-cert-manager-webhook-gandi
+cert-manager-webhook-variomedia
 deploy
 main_test.go
 scripts

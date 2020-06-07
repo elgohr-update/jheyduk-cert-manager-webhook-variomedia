@@ -1,5 +1,5 @@
-# ACME webhook for Gandi (cert-manager-webhook-gandi)
-`cert-manager-webhook-gandi` is an ACME webhook for [cert-manager]. It provides an ACME (read: Let's Encrypt) webhook for [cert-manager], which allows to use a `DNS-01` challenge with [Gandi]. This allows to provide Let's Encrypt certificates to [Kubernetes] for service protocols other than HTTP and furthermore to request wildcard certificates. Internally it uses the [Gandi LiveDNS API] to communicate with Gandi.
+# ACME webhook for variomedia (cert-manager-webhook-variomedia)
+`cert-manager-webhook-variomedia` is an ACME webhook for [cert-manager]. It provides an ACME (read: Let's Encrypt) webhook for [cert-manager], which allows to use a `DNS-01` challenge with [variomedia]. This allows to provide Let's Encrypt certificates to [Kubernetes] for service protocols other than HTTP and furthermore to request wildcard certificates. Internally it uses the [variomedia LiveDNS API] to communicate with variomedia.
 
 Quoting the [ACME DNS-01 challenge]:
 
@@ -7,7 +7,7 @@ Quoting the [ACME DNS-01 challenge]:
 
 
 ## Building
-Build the container image `cert-manager-webhook-gandi:latest`:
+Build the container image `cert-manager-webhook-variomedia:latest`:
 
     make build
 
@@ -15,7 +15,7 @@ Build the container image `cert-manager-webhook-gandi:latest`:
 ## Image
 Ready made images are hosted on Docker Hub ([image tags]). Use at your own risk:
 
-    bwolf/cert-manager-webhook-gandi
+    jheyduk/cert-manager-webhook-variomedia
 
 
 ### Release History
@@ -62,10 +62,10 @@ This webhook has been tested with [cert-manager] v0.13.1 and Kubernetes v0.17.x 
             kubectl describe pods -n cert-manager | less
 
 
-3. Create the secret to keep the Gandi API key in the default namespace, where later on the Issuer and the Certificate are created:
+3. Create the secret to keep the variomedia API key in the default namespace, where later on the Issuer and the Certificate are created:
 
-        kubectl create secret generic gandi-credentials \
-            --from-literal=api-token='<GANDI-API-KEY>'
+        kubectl create secret generic variomedia-credentials \
+            --from-literal=api-token='<variomedia-API-KEY>'
 
     **Note**: See [RBAC Authorization]:
 
@@ -73,31 +73,31 @@ This webhook has been tested with [cert-manager] v0.13.1 and Kubernetes v0.17.x 
 
     *As far as I understand cert-manager, the `Secret` must reside in the same namespace as the `Issuer` and `Certificate` resource.*
 
-4. Grant permission for the service-account to access the secret holding the Gandi API key:
+4. Grant permission for the service-account to access the secret holding the variomedia API key:
 
         kubectl apply -f rbac.yaml
 
 5. Deploy this locally built webhook (add `--dry-run` to try it and `--debug` to inspect the rendered manifests; Set `logLevel` to 6 for verbose logs):
 
-        helm install cert-manager-webhook-gandi \
+        helm install cert-manager-webhook-variomedia \
             --namespace cert-manager \
-            --set image.repository=cert-manager-webhook-gandi \
+            --set image.repository=cert-manager-webhook-variomedia \
             --set image.tag=latest \
             --set logLevel=2 \
-            ./deploy/cert-manager-webhook-gandi
+            ./deploy/cert-manager-webhook-variomedia
 
     To deploy using the image from Docker Hub (for example using the `v0.1.1` tag):
 
-        helm install cert-manager-webhook-gandi \
+        helm install cert-manager-webhook-variomedia \
             --namespace cert-manager \
             --set image.tag=v0.1.1 \
             --set logLevel=2 \
-            ./deploy/cert-manager-webhook-gandi
+            ./deploy/cert-manager-webhook-variomedia
 
     Check the logs
 
             kubectl get pods -n cert-manager --watch
-            kubectl logs -n cert-manager cert-manager-webhook-gandi-XYZ
+            kubectl logs -n cert-manager cert-manager-webhook-variomedia-XYZ
 
 6. Create a staging issuer (email addresses with the suffix `example.com` are forbidden):
 
@@ -119,12 +119,12 @@ This webhook has been tested with [cert-manager] v0.13.1 and Kubernetes v0.17.x 
             solvers:
             - dns01:
                 webhook:
-                  groupName: acme.bwolf.me
-                  solverName: gandi
+                  groupName: acme.jheyduk.dev
+                  solverName: variomedia
                   config:
                     apiKeySecretRef:
                       key: api-token
-                      name: gandi-credentials
+                      name: variomedia-credentials
         EOF
 
     Check status of the Issuer:
@@ -181,9 +181,9 @@ This webhook has been tested with [cert-manager] v0.13.1 and Kubernetes v0.17.x 
 
 99. Uninstall this webhook:
 
-        helm uninstall cert-manager-webhook-gandi --namespace cert-manager
+        helm uninstall cert-manager-webhook-variomedia --namespace cert-manager
         kubectl delete -f rbac.yaml
-        kubectl delete gandi-credentials
+        kubectl delete variomedia-credentials
 
 100. Uninstalling cert-manager:
 This is out of scope here. Refer to the official [documentation][cert-manager-uninstall].
@@ -201,16 +201,16 @@ This is out of scope here. Refer to the official [documentation][cert-manager-un
 
 
 ## Conformance test
-Please note that the test is not a typical unit or integration test. Instead it invokes the web hook in a Kubernetes-like environment which asks the web hook to really call the DNS provider (.i.e. Gandi). It attempts to create an `TXT` entry like `cert-manager-dns01-tests.example.com`, verifies the presence of the entry via Google DNS. Finally it removes the entry by calling the cleanup method of web hook.
+Please note that the test is not a typical unit or integration test. Instead it invokes the web hook in a Kubernetes-like environment which asks the web hook to really call the DNS provider (.i.e. variomedia). It attempts to create an `TXT` entry like `cert-manager-dns01-tests.example.com`, verifies the presence of the entry via Google DNS. Finally it removes the entry by calling the cleanup method of web hook.
 
 **Note**: Replace the string `darwin` in the URL below with an OS matching your system (e.g. `linux`).
 
-As said above, the conformance test is run against the real Gandi API. Therefore you *must* have a Gandi account, a domain and an API key.
+As said above, the conformance test is run against the real variomedia API. Therefore you *must* have a variomedia account, a domain and an API key.
 
 ``` shell
-cp testdata/gandi/api-key.yaml.sample testdata/gandi/api-key.yaml
-echo -n $YOUR_GANDI_API_KEY | base64 | pbcopy # or xclip
-$EDITOR testdata/gandi/api-key.yaml
+cp testdata/variomedia/api-key.yaml.sample testdata/variomedia/api-key.yaml
+echo -n $YOUR_variomedia_API_KEY | base64 | pbcopy # or xclip
+$EDITOR testdata/variomedia/api-key.yaml
 ./scripts/fetch-test-binaries.sh
 TEST_ZONE_NAME=example.com. go test -v .
 ```
@@ -220,10 +220,10 @@ TEST_ZONE_NAME=example.com. go test -v .
 [ACME documentation]: https://cert-manager.io/docs/configuration/acme/
 [Certificate]: https://cert-manager.io/docs/usage/certificate/
 [cert-manager]: https://cert-manager.io/
-[Gandi]: https://gandi.net/
-[Gandi LiveDNS API]: https://doc.livedns.gandi.net
+[variomedia]: https://variomedia.de/
+[variomedia DNS API]: https://api.variomedia.de/docs/dns-records.html
 [Helm]: https://helm.sh
-[image tags]: https://hub.docker.com/r/bwolf/cert-manager-webhook-gandi
+[image tags]: https://hub.docker.com/r/jheyduk/cert-manager-webhook-variomedia
 [Kubernetes]: https://kubernetes.io/
 [RBAC Authorization]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [setting-nameservers-for-dns01-self-check]: https://cert-manager.io/docs/configuration/acme/dns01/#setting-nameservers-for-dns01-self-check

@@ -11,38 +11,38 @@ import (
 )
 
 const (
-	GandiLiveDnsBaseUrl = "https://dns.api.gandi.net/api/v5"
+	variomediaLiveDnsBaseUrl = "https://dns.api.variomedia.net/api/v5"
 )
 
-type GandiClient struct {
+type variomediaClient struct {
 	apiKey              string
 	dumpRequestResponse bool
 }
 
-type GandiRRSet struct {
+type variomediaRRSet struct {
 	Type   string   `json:"rrset_type"`
 	TTL    int      `json:"rrset_ttl"`
 	Name   string   `json:"rrset_name"`
 	Values []string `json:"rrset_values"`
 }
 
-type GandiRRSetValues struct {
+type variomediaRRSetValues struct {
 	TTL    int      `json:"rrset_ttl"`
 	Values []string `json:"rrset_values"`
 }
 
-func NewGandiClient(apiKey string) *GandiClient {
-	return &GandiClient{
-		apiKey: apiKey,
+func NewvariomediaClient(apiKey string) *variomediaClient {
+	return &variomediaClient{
+		apiKey:              apiKey,
 		dumpRequestResponse: false,
 	}
 }
 
-func (c *GandiClient) gandiRecordsUrl(domain string) string {
-	return fmt.Sprintf("%s/domains/%s/records", GandiLiveDnsBaseUrl, domain)
+func (c *variomediaClient) variomediaRecordsUrl(domain string) string {
+	return fmt.Sprintf("%s/domains/%s/records", variomediaLiveDnsBaseUrl, domain)
 }
 
-func (c *GandiClient) doRequest(req *http.Request, readResponseBody bool) (int, []byte, error) {
+func (c *variomediaClient) doRequest(req *http.Request, readResponseBody bool) (int, []byte, error) {
 	if c.dumpRequestResponse {
 		dump, _ := httputil.DumpRequest(req, true)
 		fmt.Printf("Request: %q\n", dump)
@@ -75,10 +75,10 @@ func (c *GandiClient) doRequest(req *http.Request, readResponseBody bool) (int, 
 	return res.StatusCode, nil, nil
 }
 
-func (c *GandiClient) HasTxtRecord(domain *string, name *string) (bool, error) {
+func (c *variomediaClient) HasTxtRecord(domain *string, name *string) (bool, error) {
 	// curl -H "X-Api-Key: $APIKEY" \
-	//     https://dns.api.gandi.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
-	url := fmt.Sprintf("%s/%s/TXT", c.gandiRecordsUrl(*domain), *name)
+	//     https://dns.api.variomedia.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
+	url := fmt.Sprintf("%s/%s/TXT", c.variomediaRecordsUrl(*domain), *name)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return false, err
@@ -99,21 +99,21 @@ func (c *GandiClient) HasTxtRecord(domain *string, name *string) (bool, error) {
 	}
 }
 
-func (c *GandiClient) CreateTxtRecord(domain *string, name *string, value *string, ttl int) error {
+func (c *variomediaClient) CreateTxtRecord(domain *string, name *string, value *string, ttl int) error {
 	// curl -X POST -H "Content-Type: application/json" \
 	//             -H "X-Api-Key: $APIKEY" \
 	//             -d '{"rrset_name": "<NAME>",
 	//                  "rrset_type": "<TYPE>",
 	//                  "rrset_ttl": 10800,
 	//                  "rrset_values": ["<VALUE>"]}' \
-	//             https://dns.api.gandi.net/api/v5/domains/<DOMAIN>/records
-	rrs := GandiRRSet{Name: *name, Type: "TXT", TTL: ttl, Values: []string{*value}}
+	//             https://dns.api.variomedia.net/api/v5/domains/<DOMAIN>/records
+	rrs := variomediaRRSet{Name: *name, Type: "TXT", TTL: ttl, Values: []string{*value}}
 	body, err := json.Marshal(rrs)
 	if err != nil {
 		return fmt.Errorf("cannot marshall to json: %v", err)
 	}
 
-	url := c.gandiRecordsUrl(*domain)
+	url := c.variomediaRecordsUrl(*domain)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -133,19 +133,19 @@ func (c *GandiClient) CreateTxtRecord(domain *string, name *string, value *strin
 	return nil
 }
 
-func (c *GandiClient) UpdateTxtRecord(domain *string, name *string, value *string, ttl int) error {
+func (c *variomediaClient) UpdateTxtRecord(domain *string, name *string, value *string, ttl int) error {
 	// curl -X PUT -H "Content-Type: application/json" \
 	//            -H "X-Api-Key: $APIKEY" \
 	//            -d '{"rrset_ttl": 10800,
 	//                 "rrset_values":["<VALUE>"]}' \
-	//            https://dns.api.gandi.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
-	rrs := GandiRRSetValues{TTL: ttl, Values: []string{*value}}
+	//            https://dns.api.variomedia.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
+	rrs := variomediaRRSetValues{TTL: ttl, Values: []string{*value}}
 	body, err := json.Marshal(rrs)
 	if err != nil {
 		return fmt.Errorf("cannot marshall to json: %v", err)
 	}
 
-	url := fmt.Sprintf("%s/%s/TXT", c.gandiRecordsUrl(*domain), *name)
+	url := fmt.Sprintf("%s/%s/TXT", c.variomediaRecordsUrl(*domain), *name)
 	req, err := http.NewRequest("PUT", url, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -165,11 +165,11 @@ func (c *GandiClient) UpdateTxtRecord(domain *string, name *string, value *strin
 	return nil
 }
 
-func (c *GandiClient) DeleteTxtRecord(domain *string, name *string) error {
+func (c *variomediaClient) DeleteTxtRecord(domain *string, name *string) error {
 	// curl -X DELETE -H "Content-Type: application/json" \
 	//  -H "X-Api-Key: $APIKEY" \
-	// https://dns.api.gandi.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
-	url := fmt.Sprintf("%s/%s/TXT", c.gandiRecordsUrl(*domain), *name)
+	// https://dns.api.variomedia.net/api/v5/domains/<DOMAIN>/records/<NAME>/<TYPE>
+	url := fmt.Sprintf("%s/%s/TXT", c.variomediaRecordsUrl(*domain), *name)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
@@ -186,4 +186,3 @@ func (c *GandiClient) DeleteTxtRecord(domain *string, name *string) error {
 
 	return nil
 }
-

@@ -9,7 +9,7 @@ jobs:
     - name: Build and Publish to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
-        name: bwolf/cert-manager-webhook-gandi
+        name: jheyduk/cert-manager-webhook-variomedia
         username: '${{ secrets.DOCKER_USERNAME }}'
         password: '${{ secrets.DOCKER_PASSWORD }}'
         buildoptions: "--compress --force-rm"

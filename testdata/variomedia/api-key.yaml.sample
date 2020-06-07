@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: gandi-api-key
+  name: variomedia-api-key
 type: Opaque
 data:
   key: <BASE64 API KEY>

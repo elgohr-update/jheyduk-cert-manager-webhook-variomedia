@@ -1,4 +1,4 @@
-IMAGE_NAME := "cert-manager-webhook-gandi"
+IMAGE_NAME := "cert-manager-webhook-variomedia"
 IMAGE_TAG := "latest"
 
 OUT := $(shell pwd)/_out
@@ -13,8 +13,8 @@ build:
 
 .PHONY: rendered-manifest.yaml
 rendered-manifest.yaml:
-#	    --name cert-manager-webhook-gandi $BACKSLASH
+#	    --name cert-manager-webhook-variomedia $BACKSLASH
 	helm template \
         --set image.repository=$(IMAGE_NAME) \
         --set image.tag=$(IMAGE_TAG) \
-        deploy/cert-manager-webhook-gandi > "$(OUT)/rendered-manifest.yaml"
+        deploy/cert-manager-webhook-variomedia > "$(OUT)/rendered-manifest.yaml"

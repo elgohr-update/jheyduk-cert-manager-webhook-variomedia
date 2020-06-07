@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	GandiMinTtl = 300 // Gandi reports an error for values < this value
+	variomediaMinTtl = 300 // variomedia reports an error for values < this value
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -28,25 +28,25 @@ func main() {
 		panic("GROUP_NAME must be specified")
 	}
 
-	// This will register our gandi DNS provider with the webhook serving
+	// This will register our variomedia DNS provider with the webhook serving
 	// library, making it available as an API under the provided GroupName.
 	// You can register multiple DNS provider implementations with a single
 	// webhook, where the Name() method will be used to disambiguate between
 	// the different implementations.
 	cmd.RunWebhookServer(GroupName,
-		&gandiDNSProviderSolver{},
+		&variomediaDNSProviderSolver{},
 	)
 }
 
-// gandiDNSProviderSolver implements the provider-specific logic needed to
+// variomediaDNSProviderSolver implements the provider-specific logic needed to
 // 'present' an ACME challenge TXT record for your own DNS provider.
 // To do so, it must implement the `github.com/jetstack/cert-manager/pkg/acme/webhook.Solver`
 // interface.
-type gandiDNSProviderSolver struct {
+type variomediaDNSProviderSolver struct {
 	client *kubernetes.Clientset
 }
 
-// gandiDNSProviderConfig is a structure that is used to decode into when
+// variomediaDNSProviderConfig is a structure that is used to decode into when
 // solving a DNS01 challenge.
 // This information is provided by cert-manager, and may be a reference to
 // additional configuration that's needed to solve the challenge for this
@@ -60,7 +60,7 @@ type gandiDNSProviderSolver struct {
 // You should not include sensitive information here. If credentials need to
 // be used by your provider here, you should reference a Kubernetes Secret
 // resource and fetch these credentials using a Kubernetes clientset.
-type gandiDNSProviderConfig struct {
+type variomediaDNSProviderConfig struct {
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 	APIKeySecretRef cmmeta.SecretKeySelector `json:"apiKeySecretRef"`
@@ -72,8 +72,8 @@ type gandiDNSProviderConfig struct {
 // solvers configured with the same Name() **so long as they do not co-exist
 // within a single webhook deployment**.
 // For example, `cloudflare` may be used as the name of a solver.
-func (c *gandiDNSProviderSolver) Name() string {
-	return "gandi"
+func (c *variomediaDNSProviderSolver) Name() string {
+	return "variomedia"
 }
 
 // Present is responsible for actually presenting the DNS record with the
@@ -81,7 +81,7 @@ func (c *gandiDNSProviderSolver) Name() string {
 // This method should tolerate being called multiple times with the same value.
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
-func (c *gandiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
+func (c *variomediaDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	klog.V(6).Infof("call function Present: namespace=%s, zone=%s, fqdn=%s",
 		ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN)
 
@@ -97,23 +97,23 @@ func (c *gandiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		return fmt.Errorf("unable to get API key: %v", err)
 	}
 
-	gandiClient := NewGandiClient(*apiKey)
+	variomediaClient := NewvariomediaClient(*apiKey)
 
 	entry, domain := c.getDomainAndEntry(ch)
 	klog.V(6).Infof("present for entry=%s, domain=%s", entry, domain)
 
-	present, err := gandiClient.HasTxtRecord(&domain, &entry)
+	present, err := variomediaClient.HasTxtRecord(&domain, &entry)
 	if err != nil {
 		return fmt.Errorf("unable to check TXT record: %v", err)
 	}
 
 	if present {
-		err := gandiClient.UpdateTxtRecord(&domain, &entry, &ch.Key, GandiMinTtl)
+		err := variomediaClient.UpdateTxtRecord(&domain, &entry, &ch.Key, variomediaMinTtl)
 		if err != nil {
 			return fmt.Errorf("unable to change TXT record: %v", err)
 		}
 	} else {
-		err := gandiClient.CreateTxtRecord(&domain, &entry, &ch.Key, GandiMinTtl)
+		err := variomediaClient.CreateTxtRecord(&domain, &entry, &ch.Key, variomediaMinTtl)
 		if err != nil {
 			return fmt.Errorf("unable to create TXT record: %v", err)
 		}
@@ -128,7 +128,7 @@ func (c *gandiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // value provided on the ChallengeRequest should be cleaned up.
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
-func (c *gandiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
+func (c *variomediaDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	klog.V(6).Infof("call function CleanUp: namespace=%s, zone=%s, fqdn=%s",
 		ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN)
 
@@ -142,18 +142,18 @@ func (c *gandiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		return fmt.Errorf("unable to get API key: %v", err)
 	}
 
-	gandiClient := NewGandiClient(*apiKey)
+	variomediaClient := NewvariomediaClient(*apiKey)
 
 	entry, domain := c.getDomainAndEntry(ch)
 
-	present, err := gandiClient.HasTxtRecord(&domain, &entry)
+	present, err := variomediaClient.HasTxtRecord(&domain, &entry)
 	if err != nil {
 		return fmt.Errorf("unable to check TXT record: %v", err)
 	}
 
 	if present {
 		klog.V(6).Infof("deleting entry=%s, domain=%s", entry, domain)
-		err := gandiClient.DeleteTxtRecord(&domain, &entry)
+		err := variomediaClient.DeleteTxtRecord(&domain, &entry)
 		if err != nil {
 			return fmt.Errorf("unable to remove TXT record: %v", err)
 		}
@@ -171,7 +171,7 @@ func (c *gandiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 // provider accounts.
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
-func (c *gandiDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, _ <-chan struct{}) error {
+func (c *variomediaDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, _ <-chan struct{}) error {
 	klog.V(6).Infof("call function Initialize")
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
@@ -183,8 +183,8 @@ func (c *gandiDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, _ <-c
 
 // loadConfig is a small helper function that decodes JSON configuration into
 // the typed config struct.
-func loadConfig(cfgJSON *extapi.JSON) (gandiDNSProviderConfig, error) {
-	cfg := gandiDNSProviderConfig{}
+func loadConfig(cfgJSON *extapi.JSON) (variomediaDNSProviderConfig, error) {
+	cfg := variomediaDNSProviderConfig{}
 	// handle the 'base case' where no configuration has been provided
 	if cfgJSON == nil {
 		return cfg, nil
@@ -196,8 +196,7 @@ func loadConfig(cfgJSON *extapi.JSON) (gandiDNSProviderConfig, error) {
 	return cfg, nil
 }
 
-
-func (c *gandiDNSProviderSolver) getDomainAndEntry(ch *v1alpha1.ChallengeRequest) (string, string) {
+func (c *variomediaDNSProviderSolver) getDomainAndEntry(ch *v1alpha1.ChallengeRequest) (string, string) {
 	// Both ch.ResolvedZone and ch.ResolvedFQDN end with a dot: '.'
 	entry := strings.TrimSuffix(ch.ResolvedFQDN, ch.ResolvedZone)
 	entry = strings.TrimSuffix(entry, ".")
@@ -205,8 +204,8 @@ func (c *gandiDNSProviderSolver) getDomainAndEntry(ch *v1alpha1.ChallengeRequest
 	return entry, domain
 }
 
-// Get Gandi API key from Kubernetes secret.
-func (c *gandiDNSProviderSolver) getApiKey(cfg *gandiDNSProviderConfig, namespace string) (*string, error) {
+// Get variomedia API key from Kubernetes secret.
+func (c *variomediaDNSProviderSolver) getApiKey(cfg *variomediaDNSProviderConfig, namespace string) (*string, error) {
 	secretName := cfg.APIKeySecretRef.LocalObjectReference.Name
 
 	klog.V(6).Infof("try to load secret `%s` with key `%s`", secretName, cfg.APIKeySecretRef.Key)
@@ -225,4 +224,3 @@ func (c *gandiDNSProviderSolver) getApiKey(cfg *gandiDNSProviderConfig, namespac
 	apiKey := string(secBytes)
 	return &apiKey, nil
 }
-
